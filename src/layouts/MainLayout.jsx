@@ -1,8 +1,10 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 export default function MainLayout() {
   const { currentUser, role, logout } = useAuth();
+  const { itemCount } = useCart();
   const navigate = useNavigate();
 
   async function handleLogout() {
@@ -22,6 +24,9 @@ export default function MainLayout() {
             <ul className="navbar-links">
               <li>
                 <NavLink to="/">Shop</NavLink>
+              </li>
+              <li>
+                <NavLink to="/cart">Cart{itemCount > 0 ? ` (${itemCount})` : ""}</NavLink>
               </li>
 
               {currentUser && role === "seller" && (

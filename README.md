@@ -3,7 +3,7 @@
 React + Firebase (Auth, Firestore, Storage). No custom backend — Firebase
 plays that role directly from the frontend.
 
-## What's built so far (Phase 1 + Phase 2 storefront)
+## What's built so far (Phases 1–3)
 
 - Project scaffold (Vite + React + React Router)
 - Firebase config wiring (`src/firebase/config.js`)
@@ -14,10 +14,14 @@ plays that role directly from the frontend.
 - Storefront: product grid, search, category + max-price filters, pagination
   (`src/pages/customer/Home.jsx` driven by `src/hooks/useProducts.js`)
 - Product details page with image gallery (`src/pages/customer/ProductDetails.jsx`)
+- Guest and signed-in cart persisted in browser storage (`src/context/CartContext.jsx`)
+- Shipping checkout with Cash on Delivery and multi-seller order splitting
+- Atomic order placement and stock decrement (`src/services/orders.js`)
+- Receipt-style order confirmation (`src/pages/customer/OrderConfirmation.jsx`)
 - Seed script that loads 100 DummyJSON products + their categories
   (`scripts/seed.mjs`, run with `npm run seed`)
 
-Everything past this — cart, orders, reviews, seller product management — is Phase 3+.
+Reviews and seller product management remain planned Phase 3+ work.
 
 ## Setup
 
@@ -53,14 +57,15 @@ to Firestore → `users` → your document → change `role` to `"admin"`.
 src/
   firebase/config.js        Firebase init (Auth, Firestore, Storage)
   context/AuthContext.jsx   register/login/logout + current role
+  context/CartContext.jsx   localStorage-backed guest and signed-in cart
   routes/ProtectedRoute.jsx Role-gated route wrapper
   layouts/MainLayout.jsx    Navbar + Footer + <Outlet/>
-  services/                 Firestore reads (products, categories)
+  services/                 Firestore reads and transactional order placement
   hooks/useProducts.js      Catalog fetch + client-side search/filter/page
   components/               ProductCard, ProductFilters, Pagination
   pages/
     auth/                   Login, Register
-    customer/               Storefront (Home, ProductDetails)
+    customer/               Storefront, cart, checkout, order confirmation
     seller/                 Seller hub
     admin/                  Admin terminal
   index.css                 Design tokens + base styles
@@ -78,7 +83,6 @@ npm run seed
 This writes ~100 DummyJSON products plus their categories. Re-running it adds
 another 100 documents with fresh IDs — it does not clear what's already there.
 
-## Next up (Phase 3)
+## Next up
 
-Cart and checkout, orders with seller-side status updates, reviews, and
-seller product CRUD.
+Reviews, seller product CRUD, and seller-side order status updates.

@@ -1,10 +1,14 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
 import Home from "./pages/customer/Home";
 import ProductDetails from "./pages/customer/ProductDetails";
+import Cart from "./pages/customer/Cart";
+import Checkout from "./pages/customer/Checkout";
+import OrderConfirmation from "./pages/customer/OrderConfirmation";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -16,11 +20,15 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route element={<MainLayout />}>
+        <CartProvider>
+          <Routes>
+            <Route element={<MainLayout />}>
             {/* Public - anyone can browse the storefront and auth pages */}
             <Route path="/" element={<Home />} />
             <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/order-confirmation" element={<OrderConfirmation />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
@@ -46,8 +54,9 @@ export default function App() {
             />
 
             <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
+            </Route>
+          </Routes>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );

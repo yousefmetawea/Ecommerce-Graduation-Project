@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
 import { fetchProductById } from "../../services/products";
 
 export default function ProductDetails() {
@@ -8,6 +9,8 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeImage, setActiveImage] = useState(0);
+  const [cartMessage, setCartMessage] = useState("");
+  const { addItem } = useCart();
 
   useEffect(() => {
     let cancelled = false;
@@ -94,12 +97,18 @@ export default function ProductDetails() {
           <p className="product-details-seller">Sold by {product.sellerName}</p>
         )}
 
-        <button className="btn btn-primary" style={{ marginTop: "1rem" }} disabled={outOfStock}>
+        <button
+          className="btn btn-primary"
+          style={{ marginTop: "1rem" }}
+          disabled={outOfStock}
+          onClick={() => {
+            addItem(product);
+            setCartMessage("Added to your cart.");
+          }}
+        >
           {outOfStock ? "Unavailable" : "Add to cart"}
         </button>
-        <p className="form-footnote" style={{ marginTop: "0.5rem" }}>
-          Cart &amp; checkout arrive in Phase 3.
-        </p>
+        {cartMessage && <p className="cart-feedback" role="status">{cartMessage} <Link to="/cart">View cart</Link></p>}
       </div>
     </div>
   );
