@@ -3,7 +3,7 @@
 React + Firebase (Auth, Firestore, Storage). No custom backend — Firebase
 plays that role directly from the frontend.
 
-## What's built so far (Phases 1–5)
+## What's built so far (Phases 1–6)
 
 - Project scaffold (Vite + React + React Router)
 - Firebase config wiring (`src/firebase/config.js`)
@@ -21,6 +21,12 @@ plays that role directly from the frontend.
   - **Inventory Management**: Real-time stock control, inline increment/decrement with instant save, and visual health badges (In Stock, Low Stock, Out of Stock).
   - **Order Management**: View all incoming store orders with buyer details, destination addresses, line items breakdown, and status workflow transitions (`pending` → `processing` → `shipped` → `delivered` / `cancelled`).
   - **Store Overview & Metrics**: Live revenue calculation, order fulfillment counts, and stock alert indicators.
+- **Phase 6 — Admin Panel (Executive Terminal)**:
+  - **User Management & Soft Delete**: Full user directory with role moderation (`customer`, `seller`, `admin`) and one-click soft delete / account suspension (`active` vs `suspended`).
+  - **Product Moderation**: Marketplace-wide catalog inspection, editing, and removal of spam listings.
+  - **Category Management**: Full CRUD for categories with custom slugs, descriptions, image banners, and live product counts.
+  - **Orders Management**: Global order tracker across all buyers and sellers with line-item inspection and status override.
+  - **Platform KPIs & Health**: Gross Platform Volume ($ GMV), user demographics, inventory health, and delivery metrics.
 
 ## Setup
 
