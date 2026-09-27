@@ -15,7 +15,7 @@ export default function ProductDetails() {
   const [cartMessage, setCartMessage] = useState("");
   const { addItem } = useCart();
   const { currentUser } = useAuth();
-  const { isWishlisted, toggle } = useWishlist();
+  const { isWishlisted, toggle, error: wishlistError } = useWishlist();
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +132,11 @@ export default function ProductDetails() {
           {cartMessage && (
             <p className="cart-feedback" role="status">
               {cartMessage} <Link to="/cart">View cart</Link>
+            </p>
+          )}
+          {wishlistError && (
+            <p className="form-error" role="alert" style={{ marginTop: "0.75rem" }}>
+              {wishlistError}
             </p>
           )}
         </div>

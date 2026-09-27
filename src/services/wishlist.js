@@ -1,13 +1,10 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   deleteDoc,
   serverTimestamp,
-  query,
-  where,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 
@@ -28,15 +25,9 @@ export async function fetchWishlist(userId) {
 }
 
 /**
- * Returns true if a product is in the user's wishlist.
- */
-export async function isWishlisted(userId, productId) {
-  const snap = await getDoc(doc(db, "users", userId, "wishlist", productId));
-  return snap.exists();
-}
-
-/**
  * Add a product to the wishlist.
+ * The product id is the doc id, so this is idempotent — hearting the same
+ * product twice just re-stamps addedAt.
  */
 export async function addToWishlist(userId, productId) {
   await setDoc(doc(db, "users", userId, "wishlist", productId), {

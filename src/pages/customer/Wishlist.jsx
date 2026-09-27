@@ -8,7 +8,7 @@ const money = (n) => `$${Number(n).toFixed(2)}`;
 
 export default function Wishlist() {
   const { currentUser } = useAuth();
-  const { wishlist, toggle } = useWishlist();
+  const { wishlist, toggle, error: wishlistError } = useWishlist();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +40,17 @@ export default function Wishlist() {
 
   if (loading) return <div className="placeholder-panel">Loading your wishlist…</div>;
 
+  if (wishlistError) {
+    return (
+      <section className="cart-empty">
+        <span className="eyebrow">Wishlist</span>
+        <h1>We couldn't load your wishlist.</h1>
+        <p className="form-error" role="alert">{wishlistError}</p>
+        <Link to="/" className="btn btn-primary cart-empty-action">Browse the shop</Link>
+      </section>
+    );
+  }
+
   if (!wishlist.length) {
     return (
       <section className="cart-empty">
@@ -60,6 +71,10 @@ export default function Wishlist() {
         </div>
         <Link to="/account" className="text-link">← Back to account</Link>
       </div>
+
+      {wishlistError && (
+        <p className="form-error" role="alert">{wishlistError}</p>
+      )}
 
       <div className="product-grid">
         {products.map((product) => (
