@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import { fetchProductById } from "../../services/products";
+import ProductReviews from "../../components/ProductReviews";
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -11,6 +14,8 @@ export default function ProductDetails() {
   const [activeImage, setActiveImage] = useState(0);
   const [cartMessage, setCartMessage] = useState("");
   const { addItem } = useCart();
+  const { currentUser } = useAuth();
+  const { isWishlisted, toggle } = useWishlist();
 
   useEffect(() => {
     let cancelled = false;
@@ -48,68 +53,92 @@ export default function ProductDetails() {
 
   const outOfStock = (product.stock ?? 0) <= 0;
   const images = product.images?.length ? product.images : [];
+  const wishlisted = currentUser ? isWishlisted(product.id) : false;
 
   return (
-    <div className="product-details">
-      <div className="product-details-gallery">
-        <div className="product-details-main-image">
-          {images[activeImage] ? (
-            <img src={images[activeImage]} alt={product.name} />
-          ) : (
-            <div className="product-card-image-fallback">No image</div>
+    <div>
+      <div className="product-details">
+        <div className="product-details-gallery">
+          <div className="product-details-main-image">
+            {images[activeImage] ? (
+              <img src={images[activeImage]} alt={product.name} />
+            ) : (
+              <div className="product-card-image-fallback">No image</div>
+            )}
+          </div>
+          {images.length > 1 && (
+            <div className="product-details-thumbs">
+              {images.map((src, i) => (
+                <button
+                  key={src + i}
+                  className={`product-details-thumb ${i === activeImage ? "active" : ""}`}
+                  onClick={() => setActiveImage(i)}
+                  aria-label={`Show image ${i + 1}`}
+                >
+                  <img src={src} alt="" />
+                </button>
+              ))}
+            </div>
           )}
         </div>
-        {images.length > 1 && (
-          <div className="product-details-thumbs">
-            {images.map((src, i) => (
-              <button
-                key={src + i}
-                className={`product-details-thumb ${i === activeImage ? "active" : ""}`}
-                onClick={() => setActiveImage(i)}
-                aria-label={`Show image ${i + 1}`}
-              >
-                <img src={src} alt="" />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
-      <div className="product-details-info">
-        <span className="tag">{product.categoryName}</span>
-        <h1>{product.name}</h1>
+        <div className="product-details-info">
+          <span className="tag">{product.categoryName}</span>
+          <h1>{product.name}</h1>
 
-        {product.rating > 0 && (
-          <p className="product-details-rating">
-            ★ {product.rating.toFixed(1)} {product.ratingCount ? `(${product.ratingCount} reviews)` : ""}
+          {product.rating > 0 && (
+            <p className="product-details-rating">
+              ★ {product.rating.toFixed(1)} {product.ratingCount ? `(${product.ratingCount} reviews)` : ""}
+            </p>
+          )}
+
+          <p className="product-details-price">${Number(product.price).toFixed(2)}</p>
+
+          <p className={`tag ${outOfStock ? "tag-rust" : "tag-sage"}`} style={{ marginBottom: "1.25rem" }}>
+            {outOfStock ? "Out of stock" : `${product.stock} in stock`}
           </p>
-        )}
 
-        <p className="product-details-price">${Number(product.price).toFixed(2)}</p>
+          <p>{product.description}</p>
 
-        <p className={`tag ${outOfStock ? "tag-rust" : "tag-sage"}`} style={{ marginBottom: "1.25rem" }}>
-          {outOfStock ? "Out of stock" : `${product.stock} in stock`}
-        </p>
+          {product.sellerName && (
+            <p className="product-details-seller">Sold by {product.sellerName}</p>
+          )}
 
-        <p>{product.description}</p>
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
+            <button
+              className="btn btn-primary"
+              style={{ flex: "1 1 auto", minWidth: "160px" }}
+              disabled={outOfStock}
+              onClick={() => {
+                addItem(product);
+                setCartMessage("Added to your cart.");
+              }}
+            >
+              {outOfStock ? "Unavailable" : "Add to cart"}
+            </button>
 
-        {product.sellerName && (
-          <p className="product-details-seller">Sold by {product.sellerName}</p>
-        )}
-
-        <button
-          className="btn btn-primary"
-          style={{ marginTop: "1rem" }}
-          disabled={outOfStock}
-          onClick={() => {
-            addItem(product);
-            setCartMessage("Added to your cart.");
-          }}
-        >
-          {outOfStock ? "Unavailable" : "Add to cart"}
-        </button>
-        {cartMessage && <p className="cart-feedback" role="status">{cartMessage} <Link to="/cart">View cart</Link></p>}
+            {currentUser && (
+              <button
+                className={`btn ${wishlisted ? "btn-wishlist-active" : "btn-secondary"}`}
+                style={{ width: "auto", padding: "0.7rem 1rem" }}
+                onClick={() => toggle(product.id)}
+                aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                title={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
+              >
+                {wishlisted ? "♥ Saved" : "♡ Wishlist"}
+              </button>
+            )}
+          </div>
+          {cartMessage && (
+            <p className="cart-feedback" role="status">
+              {cartMessage} <Link to="/cart">View cart</Link>
+            </p>
+          )}
+        </div>
       </div>
+
+      {/* Reviews section below the product details grid */}
+      <ProductReviews productId={id} />
     </div>
   );
 }
