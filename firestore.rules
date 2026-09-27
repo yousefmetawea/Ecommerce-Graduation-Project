@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// Paste this into Firebase Console → Firestore Database → Rules.
+// This is the REAL protection layer — the React ProtectedRoute only hides
+// pages in the UI, it can't stop a direct request to the database.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    function isSeller() {
+      return isSignedIn() && myRole() == 'seller';
+    }
+
+    // users/{uid} — everyone can read public profile info, but only the
+    // owner or an admin can write, and only an admin can change role/status.
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // products/{id} — public read (it's a storefront), write restricted to
+    // the seller who owns it or an admin.
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isSeller() && request.resource.data.sellerId == request.auth.uid;
+      allow update, delete: if isAdmin() ||
+        (isSeller() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // categories/{id} — public read, admin-managed.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // carts/{uid} — private to the owning user.
+    match /carts/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // wishlists/{uid} — private to the owning user.
+    match /wishlists/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // orders/{id} — the buyer, the seller(s) involved, and admins can read.
+    // Only the buyer can create; only sellers/admins can update status.
+    match /orders/{orderId} {
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        (isSeller() && resource.data.sellerId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() ||
+        (isSeller() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // reviews/{id} — public read, only the review's author can write it.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // promoCodes/{code} — public read (so checkout can validate a code),
+    // admin-managed.
+    match /promoCodes/{code} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
