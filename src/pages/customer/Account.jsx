@@ -1,10 +1,14 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useWishlist } from "../../context/WishlistContext";
+import BecomeSellerModal from "../seller/components/BecomeSellerModal";
 
 export default function Account() {
   const { currentUser, role } = useAuth();
   const { wishlist } = useWishlist();
+  const navigate = useNavigate();
+  const [isBecomeSellerOpen, setIsBecomeSellerOpen] = useState(false);
 
   if (!currentUser) {
     return (
@@ -51,7 +55,45 @@ export default function Account() {
             <p>Manage your name, address, and contact info.</p>
           </div>
         </Link>
+
+        {role === "seller" || role === "admin" ? (
+          <Link to="/seller" className="account-tile" style={{ borderColor: "var(--sage)" }}>
+            <div className="account-tile-icon" aria-hidden="true">🏪</div>
+            <div>
+              <h3>Seller Hub</h3>
+              <p>Manage products, inventory, orders, and store settings.</p>
+            </div>
+          </Link>
+        ) : (
+          <div
+            className="account-tile"
+            style={{ cursor: "pointer" }}
+            onClick={() => setIsBecomeSellerOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setIsBecomeSellerOpen(true);
+            }}
+          >
+            <div className="account-tile-icon" aria-hidden="true">🚀</div>
+            <div>
+              <h3>Become a Seller</h3>
+              <p>Open your store and start selling products today.</p>
+            </div>
+          </div>
+        )}
       </div>
+
+      <BecomeSellerModal
+        isOpen={isBecomeSellerOpen}
+        onClose={() => setIsBecomeSellerOpen(false)}
+        userId={currentUser.uid}
+        currentName={currentUser.displayName}
+        onSuccess={() => {
+          navigate("/seller");
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

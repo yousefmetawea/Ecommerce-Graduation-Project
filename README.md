@@ -3,25 +3,24 @@
 React + Firebase (Auth, Firestore, Storage). No custom backend — Firebase
 plays that role directly from the frontend.
 
-## What's built so far (Phases 1–3)
+## What's built so far (Phases 1–5)
 
 - Project scaffold (Vite + React + React Router)
 - Firebase config wiring (`src/firebase/config.js`)
 - Auth: register / login / Google sign-in / logout (`src/context/AuthContext.jsx`)
 - Role-based route protection (`src/routes/ProtectedRoute.jsx`)
-- Firestore Security Rules draft (`firestore.rules`) — the real access control
-- Base visual identity (colors/type in `src/index.css`)
+- Firestore Security Rules (`firestore.rules`) & Composite Indexes (`firestore.indexes.json`)
 - Storefront: product grid, search, category + max-price filters, pagination
-  (`src/pages/customer/Home.jsx` driven by `src/hooks/useProducts.js`)
-- Product details page with image gallery (`src/pages/customer/ProductDetails.jsx`)
-- Guest and signed-in cart persisted in browser storage (`src/context/CartContext.jsx`)
-- Shipping checkout with Cash on Delivery and multi-seller order splitting
-- Atomic order placement and stock decrement (`src/services/orders.js`)
-- Receipt-style order confirmation (`src/pages/customer/OrderConfirmation.jsx`)
-- Seed script that loads 100 DummyJSON products + their categories
-  (`scripts/seed.mjs`, run with `npm run seed`)
-
-Reviews and seller product management remain planned Phase 3+ work.
+- Product details page with image gallery and customer reviews & star ratings
+- Customer wishlist and persistent cart
+- Checkout with Cash on Delivery and multi-seller atomic order splitting
+- Order history with order tracking
+- **Phase 5 — Seller Panel**:
+  - **Seller Registration & Profile**: Store name, bio, business phone, email, and warehouse address.
+  - **Product Management**: Full CRUD to add, edit, and delete products with multi-image support (direct URLs + Firebase Storage upload).
+  - **Inventory Management**: Real-time stock control, inline increment/decrement with instant save, and visual health badges (In Stock, Low Stock, Out of Stock).
+  - **Order Management**: View all incoming store orders with buyer details, destination addresses, line items breakdown, and status workflow transitions (`pending` → `processing` → `shipped` → `delivered` / `cancelled`).
+  - **Store Overview & Metrics**: Live revenue calculation, order fulfillment counts, and stock alert indicators.
 
 ## Setup
 
