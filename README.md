@@ -3,17 +3,21 @@
 React + Firebase (Auth, Firestore, Storage). No custom backend — Firebase
 plays that role directly from the frontend.
 
-## What's built so far (Phase 1)
+## What's built so far (Phase 1 + Phase 2 storefront)
 
 - Project scaffold (Vite + React + React Router)
 - Firebase config wiring (`src/firebase/config.js`)
 - Auth: register / login / Google sign-in / logout (`src/context/AuthContext.jsx`)
 - Role-based route protection (`src/routes/ProtectedRoute.jsx`)
 - Firestore Security Rules draft (`firestore.rules`) — the real access control
-- Shell pages for each role: Home (customer), Seller hub, Admin terminal
 - Base visual identity (colors/type in `src/index.css`)
+- Storefront: product grid, search, category + max-price filters, pagination
+  (`src/pages/customer/Home.jsx` driven by `src/hooks/useProducts.js`)
+- Product details page with image gallery (`src/pages/customer/ProductDetails.jsx`)
+- Seed script that loads 100 DummyJSON products + their categories
+  (`scripts/seed.mjs`, run with `npm run seed`)
 
-Everything past this — product listings, cart, orders, reviews — is Phase 2+.
+Everything past this — cart, orders, reviews, seller product management — is Phase 3+.
 
 ## Setup
 
@@ -51,15 +55,30 @@ src/
   context/AuthContext.jsx   register/login/logout + current role
   routes/ProtectedRoute.jsx Role-gated route wrapper
   layouts/MainLayout.jsx    Navbar + Footer + <Outlet/>
+  services/                 Firestore reads (products, categories)
+  hooks/useProducts.js      Catalog fetch + client-side search/filter/page
+  components/               ProductCard, ProductFilters, Pagination
   pages/
     auth/                   Login, Register
-    customer/               Storefront pages (Home now, more in Phase 2)
+    customer/               Storefront (Home, ProductDetails)
     seller/                 Seller hub
     admin/                  Admin terminal
   index.css                 Design tokens + base styles
+scripts/seed.mjs            One-off catalog seeder (npm run seed)
 ```
 
-## Next up (Phase 2)
+## Loading the starter catalog
 
-Product listings collection, category browsing, search + filters, and
-seeding real starter data (e.g. from a temporary public API) into Firestore.
+With Firestore rules published and an admin account's credentials in `.env`:
+
+```
+npm run seed
+```
+
+This writes ~100 DummyJSON products plus their categories. Re-running it adds
+another 100 documents with fresh IDs — it does not clear what's already there.
+
+## Next up (Phase 3)
+
+Cart and checkout, orders with seller-side status updates, reviews, and
+seller product CRUD.

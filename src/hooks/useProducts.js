@@ -71,6 +71,7 @@ export function useProducts() {
     page,
     setPage,
     totalPages,
+    totalCount: products.length,
     resultCount: filtered.length,
     products: pageItems,
   };

@@ -4,6 +4,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import MainLayout from "./layouts/MainLayout";
 
 import Home from "./pages/customer/Home";
+import ProductDetails from "./pages/customer/ProductDetails";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -19,6 +20,7 @@ export default function App() {
           <Route element={<MainLayout />}>
             {/* Public - anyone can browse the storefront and auth pages */}
             <Route path="/" element={<Home />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
