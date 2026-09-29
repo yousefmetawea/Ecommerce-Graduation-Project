@@ -130,7 +130,10 @@ export default function OrderHistory() {
                     </div>
                     <div>
                       <span className="order-meta-label">Payment</span>
-                      <span>Cash on delivery</span>
+                      <span>
+                        {order.paymentMethod === "stripe" ? "Credit / Debit Card (Stripe)" : "Cash on delivery"}
+                        {order.paymentStatus === "paid" ? " (Paid)" : " (Pending)"}
+                      </span>
                     </div>
                     <div>
                       <span className="order-meta-label">Order ID</span>
