@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { validatePromoCode, calculatePromoDiscount } from "../services/promoCodes";
 
 const STORAGE_KEY = "souk-cart-v1";
+const PROMO_STORAGE_KEY = "souk-promo-v1";
 const CartContext = createContext(null);
 
 function loadCart() {
@@ -15,16 +17,38 @@ function loadCart() {
   }
 }
 
+function loadPromo() {
+  try {
+    const stored = localStorage.getItem(PROMO_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function CartProvider({ children }) {
   const [items, setItems] = useState(loadCart);
+  const [promoCode, setPromoCode] = useState(loadPromo);
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
-      // The cart remains usable in memory if browser storage is unavailable.
+      // Cart remains in memory if storage is disabled
     }
   }, [items]);
+
+  useEffect(() => {
+    try {
+      if (promoCode) {
+        localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(promoCode));
+      } else {
+        localStorage.removeItem(PROMO_STORAGE_KEY);
+      }
+    } catch {
+      // Memory fallback
+    }
+  }, [promoCode]);
 
   function addItem(product, quantity = 1) {
     const stock = Math.max(0, Number(product.stock) || 0);
@@ -69,7 +93,31 @@ export function CartProvider({ children }) {
 
   function clearCart() {
     setItems([]);
+    setPromoCode(null);
   }
+
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }, [items]);
+
+  const discount = useMemo(() => {
+    if (!promoCode) return 0;
+    return calculatePromoDiscount(promoCode, subtotal);
+  }, [promoCode, subtotal]);
+
+  const total = useMemo(() => {
+    return Math.max(0, subtotal - discount);
+  }, [subtotal, discount]);
+
+  const applyPromo = useCallback(async (codeString) => {
+    const result = await validatePromoCode(codeString, subtotal);
+    setPromoCode(result);
+    return result;
+  }, [subtotal]);
+
+  const removePromo = useCallback(() => {
+    setPromoCode(null);
+  }, []);
 
   const value = useMemo(() => ({
     items,
@@ -78,8 +126,13 @@ export function CartProvider({ children }) {
     updateQuantity,
     clearCart,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotal: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-  }), [items]);
+    subtotal,
+    promoCode,
+    discount,
+    total,
+    applyPromo,
+    removePromo,
+  }), [items, subtotal, promoCode, discount, total, applyPromo, removePromo]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

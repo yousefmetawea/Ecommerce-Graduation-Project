@@ -64,7 +64,19 @@ export default function Account() {
               <p>Manage products, inventory, orders, and store settings.</p>
             </div>
           </Link>
-        ) : (
+        ) : null}
+
+        {role === "admin" && (
+          <Link to="/admin" className="account-tile" style={{ borderColor: "var(--amber)" }}>
+            <div className="account-tile-icon" aria-hidden="true">🛡️</div>
+            <div>
+              <h3>Admin Terminal</h3>
+              <p>Moderate users, products, categories, and orders.</p>
+            </div>
+          </Link>
+        )}
+
+        {role !== "seller" && role !== "admin" && (
           <div
             className="account-tile"
             style={{ cursor: "pointer" }}

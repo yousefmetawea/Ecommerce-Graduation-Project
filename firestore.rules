@@ -110,10 +110,12 @@ service cloud.firestore {
     }
 
     // promoCodes/{code} — public read (so checkout can validate a code),
-    // admin-managed.
+    // admin-managed; timesUsed may be incremented upon checkout.
     match /promoCodes/{code} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['timesUsed']);
     }
   }
 }

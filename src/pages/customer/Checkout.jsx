@@ -8,8 +8,18 @@ const money = (amount) => `$${Number(amount).toFixed(2)}`;
 
 export default function Checkout() {
   const { currentUser } = useAuth();
-  const { items, subtotal, clearCart } = useCart();
+  const {
+    items,
+    subtotal,
+    promoCode,
+    discount,
+    total,
+    clearCart,
+    applyPromo,
+    removePromo,
+  } = useCart();
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     name: currentUser?.displayName ?? "",
     email: currentUser?.email ?? "",
@@ -19,11 +29,41 @@ export default function Checkout() {
     postalCode: "",
     country: "",
   });
+
+  const [promoInput, setPromoInput] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   function updateField(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+
+  async function handleApplyPromo(e) {
+    e.preventDefault();
+    setPromoError("");
+    setPromoSuccess("");
+    if (!promoInput.trim()) return;
+
+    setApplyingPromo(true);
+    try {
+      const res = await applyPromo(promoInput);
+      setPromoSuccess(`Promo code "${res.code}" applied!`);
+      setPromoInput("");
+    } catch (err) {
+      setPromoError(err?.message || "Invalid promo code.");
+    } finally {
+      setApplyingPromo(false);
+    }
+  }
+
+  function handleRemovePromo() {
+    removePromo();
+    setPromoSuccess("");
+    setPromoError("");
   }
 
   async function handleSubmit(event) {
@@ -42,6 +82,7 @@ export default function Checkout() {
           country: form.country,
         },
         userId: currentUser?.uid ?? null,
+        promoCode: promoCode && discount > 0 ? promoCode : null,
       });
       clearCart();
       navigate("/order-confirmation", { replace: true, state: { orders } });
@@ -66,7 +107,10 @@ export default function Checkout() {
   return (
     <div>
       <div className="page-heading">
-        <div><span className="eyebrow">Almost yours</span><h1>Checkout</h1></div>
+        <div>
+          <span className="eyebrow">Almost yours</span>
+          <h1>Checkout</h1>
+        </div>
         <Link to="/cart" className="text-link">Back to cart</Link>
       </div>
 
@@ -78,13 +122,85 @@ export default function Checkout() {
               <h2>Where should we deliver?</h2>
               <p>Guest checkout is welcome. Your details are only used to fulfill this order.</p>
               <div className="form-grid">
-                <label className="form-field"><span>Full name</span><input autoComplete="name" name="name" value={form.name} onChange={updateField} required maxLength={100} /></label>
-                <label className="form-field"><span>Email address</span><input autoComplete="email" type="email" name="email" value={form.email} onChange={updateField} required maxLength={254} /></label>
-                <label className="form-field"><span>Phone number</span><input autoComplete="tel" type="tel" name="phone" value={form.phone} onChange={updateField} required maxLength={30} /></label>
-                <label className="form-field field-full"><span>Street address</span><input autoComplete="street-address" name="address" value={form.address} onChange={updateField} required maxLength={180} /></label>
-                <label className="form-field"><span>City</span><input autoComplete="address-level2" name="city" value={form.city} onChange={updateField} required maxLength={80} /></label>
-                <label className="form-field"><span>Postal code</span><input autoComplete="postal-code" name="postalCode" value={form.postalCode} onChange={updateField} required maxLength={20} /></label>
-                <label className="form-field field-full"><span>Country</span><input autoComplete="country-name" name="country" value={form.country} onChange={updateField} required maxLength={80} /></label>
+                <label className="form-field">
+                  <span>Full name</span>
+                  <input
+                    autoComplete="name"
+                    name="name"
+                    value={form.name}
+                    onChange={updateField}
+                    required
+                    maxLength={100}
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Email address</span>
+                  <input
+                    autoComplete="email"
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={updateField}
+                    required
+                    maxLength={254}
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Phone number</span>
+                  <input
+                    autoComplete="tel"
+                    type="tel"
+                    name="phone"
+                    value={form.phone}
+                    onChange={updateField}
+                    required
+                    maxLength={30}
+                  />
+                </label>
+                <label className="form-field field-full">
+                  <span>Street address</span>
+                  <input
+                    autoComplete="street-address"
+                    name="address"
+                    value={form.address}
+                    onChange={updateField}
+                    required
+                    maxLength={180}
+                  />
+                </label>
+                <label className="form-field">
+                  <span>City</span>
+                  <input
+                    autoComplete="address-level2"
+                    name="city"
+                    value={form.city}
+                    onChange={updateField}
+                    required
+                    maxLength={80}
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Postal code</span>
+                  <input
+                    autoComplete="postal-code"
+                    name="postalCode"
+                    value={form.postalCode}
+                    onChange={updateField}
+                    required
+                    maxLength={20}
+                  />
+                </label>
+                <label className="form-field field-full">
+                  <span>Country</span>
+                  <input
+                    autoComplete="country-name"
+                    name="country"
+                    value={form.country}
+                    onChange={updateField}
+                    required
+                    maxLength={80}
+                  />
+                </label>
               </div>
             </div>
           </section>
@@ -95,17 +211,26 @@ export default function Checkout() {
               <h2>How would you like to pay?</h2>
               <label className="payment-option payment-option-selected">
                 <input type="radio" name="payment" value="cash_on_delivery" checked readOnly />
-                <span><strong>Cash on delivery</strong><small>Pay when your order arrives</small></span>
+                <span>
+                  <strong>Cash on delivery</strong>
+                  <small>Pay when your order arrives</small>
+                </span>
                 <span className="payment-check">Selected</span>
               </label>
               <div className="payment-option payment-option-disabled" aria-disabled="true">
                 <span className="payment-radio-placeholder" />
-                <span><strong>Credit or debit card</strong><small>Secure online payment</small></span>
+                <span>
+                  <strong>Credit or debit card</strong>
+                  <small>Secure online payment</small>
+                </span>
                 <span className="coming-soon">Coming soon</span>
               </div>
               <div className="payment-option payment-option-disabled" aria-disabled="true">
                 <span className="payment-radio-placeholder" />
-                <span><strong>Digital wallet</strong><small>Pay with your preferred wallet</small></span>
+                <span>
+                  <strong>Digital wallet</strong>
+                  <small>Pay with your preferred wallet</small>
+                </span>
                 <span className="coming-soon">Coming soon</span>
               </div>
             </div>
@@ -113,7 +238,7 @@ export default function Checkout() {
 
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="btn btn-primary place-order-button" type="submit" disabled={submitting}>
-            {submitting ? "Placing your order…" : `Place order · ${money(subtotal)}`}
+            {submitting ? "Placing your order…" : `Place order · ${money(total)}`}
           </button>
           <p className="checkout-legal">By placing this order, you confirm that the delivery details are correct.</p>
         </form>
@@ -124,16 +249,88 @@ export default function Checkout() {
           <div className="checkout-items">
             {items.map((item) => (
               <div className="checkout-item" key={item.id}>
-                <div className="checkout-item-image">{item.image && <img src={item.image} alt="" />}</div>
-                <div><strong>{item.name}</strong><span>{item.quantity} × {money(item.price)}</span></div>
+                <div className="checkout-item-image">
+                  {item.image && <img src={item.image} alt="" />}
+                </div>
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.quantity} × {money(item.price)}</span>
+                </div>
                 <strong>{money(item.quantity * item.price)}</strong>
               </div>
             ))}
           </div>
-          <div className="summary-row"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-          <div className="summary-row"><span>Shipping</span><span>Confirmed by seller</span></div>
-          <div className="summary-row summary-total"><span>Items total</span><strong>{money(subtotal)}</strong></div>
-          <p className="summary-note">Multi-seller carts are split into separate seller orders. Shipping charges are confirmed by each seller and are not included in this total.</p>
+
+          <div className="summary-row">
+            <span>Subtotal</span>
+            <strong>{money(subtotal)}</strong>
+          </div>
+
+          {/* Promo code in checkout summary */}
+          <div className="promo-box">
+            {promoCode ? (
+              <div className="promo-applied-badge">
+                <div>
+                  <span className="promo-tag-name">🏷️ {promoCode.code}</span>
+                  <span className="promo-tag-desc">
+                    {promoCode.type === "percentage" ? `${promoCode.value}% OFF` : `${money(promoCode.value)} OFF`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="promo-remove-btn"
+                  onClick={handleRemovePromo}
+                  title="Remove promo code"
+                  aria-label="Remove promo code"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyPromo} className="promo-form">
+                <div className="promo-input-wrap">
+                  <input
+                    type="text"
+                    placeholder="Have a promo code?"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    disabled={applyingPromo}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-secondary promo-apply-btn"
+                    disabled={!promoInput.trim() || applyingPromo}
+                  >
+                    {applyingPromo ? "…" : "Apply"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {promoSuccess && <div className="promo-msg-success">{promoSuccess}</div>}
+            {promoError && <div className="promo-msg-error">{promoError}</div>}
+          </div>
+
+          {discount > 0 && (
+            <div className="summary-row summary-discount">
+              <span>Discount ({promoCode?.code})</span>
+              <strong>-{money(discount)}</strong>
+            </div>
+          )}
+
+          <div className="summary-row">
+            <span>Shipping</span>
+            <span>Confirmed by seller</span>
+          </div>
+
+          <div className="summary-row summary-total">
+            <span>Items total</span>
+            <strong>{money(total)}</strong>
+          </div>
+
+          <p className="summary-note">
+            Multi-seller carts are split into separate seller orders. Shipping charges are confirmed by each seller and are not included in this total.
+          </p>
         </aside>
       </div>
     </div>
