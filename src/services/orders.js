@@ -21,6 +21,8 @@ export async function placeOrders({
   shippingAddress,
   userId = null,
   promoCode = null,
+  paymentMethod = "cash_on_delivery",
+  paymentStatus = "pending",
 }) {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new Error("Your cart is empty.");
@@ -173,7 +175,8 @@ export async function placeOrders({
           postalCode: shippingAddress.postalCode.trim(),
           country: shippingAddress.country.trim(),
         },
-        paymentMethod: "cash_on_delivery",
+        paymentMethod: paymentMethod || "cash_on_delivery",
+        paymentStatus: paymentStatus || "pending",
         status: "pending",
       };
 

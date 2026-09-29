@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { placeOrders } from "../../services/orders";
+import { processStripeTestPayment } from "../../services/stripe";
 
 const money = (amount) => `$${Number(amount).toFixed(2)}`;
 
@@ -19,6 +20,13 @@ export default function Checkout() {
     removePromo,
   } = useCart();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isCanceled = searchParams.get("canceled") === "true";
+
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
+  const [cardExpiry, setCardExpiry] = useState("12/30");
+  const [cardCvc, setCardCvc] = useState("123");
 
   const [form, setForm] = useState({
     name: currentUser?.displayName ?? "",
@@ -71,24 +79,45 @@ export default function Checkout() {
     if (!items.length || submitting) return;
     setError("");
     setSubmitting(true);
+
     try {
-      const orders = await placeOrders({
-        cartItems: items,
-        buyer: { name: form.name, email: form.email, phone: form.phone },
-        shippingAddress: {
-          address: form.address,
-          city: form.city,
-          postalCode: form.postalCode,
-          country: form.country,
-        },
-        userId: currentUser?.uid ?? null,
-        promoCode: promoCode && discount > 0 ? promoCode : null,
-      });
-      clearCart();
-      navigate("/order-confirmation", { replace: true, state: { orders } });
+      if (paymentMethod === "stripe") {
+        const result = await processStripeTestPayment({
+          cartItems: items,
+          buyer: { name: form.name, email: form.email, phone: form.phone },
+          shippingAddress: {
+            address: form.address,
+            city: form.city,
+            postalCode: form.postalCode,
+            country: form.country,
+          },
+          userId: currentUser?.uid ?? null,
+          promoCode: promoCode && discount > 0 ? promoCode : null,
+          cardDetails: { cardNumber, cardExpiry, cardCvc },
+        });
+
+        clearCart();
+        navigate("/order-confirmation", { replace: true, state: { orders: result.orders } });
+      } else {
+        const orders = await placeOrders({
+          cartItems: items,
+          buyer: { name: form.name, email: form.email, phone: form.phone },
+          shippingAddress: {
+            address: form.address,
+            city: form.city,
+            postalCode: form.postalCode,
+            country: form.country,
+          },
+          userId: currentUser?.uid ?? null,
+          promoCode: promoCode && discount > 0 ? promoCode : null,
+          paymentMethod: "cash_on_delivery",
+          paymentStatus: "pending",
+        });
+        clearCart();
+        navigate("/order-confirmation", { replace: true, state: { orders } });
+      }
     } catch (checkoutError) {
-      setError(checkoutError.message || "We couldn't place your order. Please try again.");
-    } finally {
+      setError(checkoutError.message || "We couldn't process your order. Please try again.");
       setSubmitting(false);
     }
   }
@@ -209,22 +238,84 @@ export default function Checkout() {
             <span className="section-number">02</span>
             <div className="checkout-section-content">
               <h2>How would you like to pay?</h2>
-              <label className="payment-option payment-option-selected">
-                <input type="radio" name="payment" value="cash_on_delivery" checked readOnly />
+
+              {isCanceled && (
+                <div className="form-error" style={{ marginBottom: "1rem" }}>
+                  Your payment was canceled. You can try again or select Cash on Delivery.
+                </div>
+              )}
+
+              <label className={`payment-option ${paymentMethod === "cod" ? "payment-option-selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="payment"
+                  value="cod"
+                  checked={paymentMethod === "cod"}
+                  onChange={() => setPaymentMethod("cod")}
+                />
                 <span>
                   <strong>Cash on delivery</strong>
                   <small>Pay when your order arrives</small>
                 </span>
-                <span className="payment-check">Selected</span>
+                {paymentMethod === "cod" && <span className="payment-check">Selected</span>}
               </label>
-              <div className="payment-option payment-option-disabled" aria-disabled="true">
-                <span className="payment-radio-placeholder" />
+
+              <label className={`payment-option ${paymentMethod === "stripe" ? "payment-option-selected" : ""}`}>
+                <input
+                  type="radio"
+                  name="payment"
+                  value="stripe"
+                  checked={paymentMethod === "stripe"}
+                  onChange={() => setPaymentMethod("stripe")}
+                />
                 <span>
                   <strong>Credit or debit card</strong>
-                  <small>Secure online payment</small>
+                  <small>Stripe Test Mode Demo (Zero-Cost)</small>
                 </span>
-                <span className="coming-soon">Coming soon</span>
-              </div>
+                <span className="promo-badge" style={{ backgroundColor: "#6366f1", color: "#fff" }}>Stripe Test</span>
+                {paymentMethod === "stripe" && <span className="payment-check">Selected</span>}
+              </label>
+
+              {paymentMethod === "stripe" && (
+                <div className="stripe-test-notice" style={{ padding: "1rem", background: "var(--color-bg-alt, #f8fafc)", border: "1px solid var(--color-border, #e2e8f0)", borderRadius: "8px", marginTop: "0.5rem" }}>
+                  <div style={{ fontSize: "0.85rem", marginBottom: "0.75rem", color: "#475569" }}>
+                    💳 <strong>Stripe Test Simulation:</strong> Use <code>4242 4242 4242 4242</code> for demo card payment. No real charge will occur.
+                  </div>
+                  <div className="form-grid" style={{ gap: "0.75rem" }}>
+                    <label className="form-field field-full">
+                      <span style={{ fontSize: "0.8rem" }}>Card number</span>
+                      <input
+                        type="text"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        placeholder="4242 4242 4242 4242"
+                        required
+                      />
+                    </label>
+                    <label className="form-field">
+                      <span style={{ fontSize: "0.8rem" }}>Expires</span>
+                      <input
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value)}
+                        placeholder="MM/YY"
+                        required
+                      />
+                    </label>
+                    <label className="form-field">
+                      <span style={{ fontSize: "0.8rem" }}>CVC</span>
+                      <input
+                        type="text"
+                        value={cardCvc}
+                        onChange={(e) => setCardCvc(e.target.value)}
+                        placeholder="123"
+                        required
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <div className="payment-option payment-option-disabled" aria-disabled="true">
                 <span className="payment-radio-placeholder" />
                 <span>
@@ -238,7 +329,13 @@ export default function Checkout() {
 
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="btn btn-primary place-order-button" type="submit" disabled={submitting}>
-            {submitting ? "Placing your order…" : `Place order · ${money(total)}`}
+            {submitting
+              ? paymentMethod === "stripe"
+                ? "Processing Card Payment…"
+                : "Placing your order…"
+              : paymentMethod === "stripe"
+              ? `Pay with Test Card · ${money(total)}`
+              : `Place order · ${money(total)}`}
           </button>
           <p className="checkout-legal">By placing this order, you confirm that the delivery details are correct.</p>
         </form>

@@ -20,8 +20,14 @@ export default function OrderConfirmation() {
   const firstOrder = orders[0];
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
   const grandDiscount = orders.reduce((sum, order) => sum + (order.discount || 0), 0);
-  const grandSubtotal = orders.reduce((sum, order) => sum + (order.subtotal || order.total), 0);
   const promoCodeUsed = orders.find((o) => o.promoCode)?.promoCode;
+
+  const paymentMethodLabel =
+    firstOrder.paymentMethod === "stripe"
+      ? "Credit / Debit Card (Stripe Test Demo)"
+      : "Cash on delivery";
+
+  const isPaid = firstOrder.paymentStatus === "paid";
 
   return (
     <article className="receipt">
@@ -32,7 +38,21 @@ export default function OrderConfirmation() {
       <p className="receipt-intro">Your order is in. Each seller will prepare their part of your delivery.</p>
       <div className="receipt-meta">
         <div><span>Placed for</span><strong>{firstOrder.buyer.name}</strong></div>
-        <div><span>Payment</span><strong>Cash on delivery</strong></div>
+        <div>
+          <span>Payment</span>
+          <strong>
+            {paymentMethodLabel}
+            {isPaid ? (
+              <span className="promo-badge" style={{ backgroundColor: "#22c55e", color: "#fff", marginLeft: "0.5rem" }}>
+                Paid
+              </span>
+            ) : (
+              <span className="promo-badge" style={{ backgroundColor: "#f59e0b", color: "#fff", marginLeft: "0.5rem" }}>
+                Pending
+              </span>
+            )}
+          </strong>
+        </div>
         <div><span>Deliver to</span><strong>{firstOrder.shippingAddress.address}, {firstOrder.shippingAddress.city}</strong></div>
       </div>
 
