@@ -24,7 +24,7 @@ export default function OrderConfirmation() {
 
   const paymentMethodLabel =
     firstOrder.paymentMethod === "stripe"
-      ? "Credit / Debit Card (Stripe)"
+      ? "Credit / Debit Card (Stripe Test Demo)"
       : "Cash on delivery";
 
   const isPaid = firstOrder.paymentStatus === "paid";

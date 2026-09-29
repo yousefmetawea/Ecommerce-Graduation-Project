@@ -1,10 +1,8 @@
-import { getFunctions, httpsCallable } from "firebase/functions";
-import app from "../firebase/config";
-
-const functions = getFunctions(app);
+import { placeOrders } from "./orders";
 
 /**
- * Initiates Stripe Checkout by calling the server-side Firebase Cloud Function.
+ * Simulates Stripe Test Mode card payment processing without requiring a paid
+ * server (Firebase Blaze plan) or exposing secret keys.
  *
  * @param {Object} params
  * @param {Array} params.cartItems
@@ -12,48 +10,51 @@ const functions = getFunctions(app);
  * @param {Object} params.shippingAddress
  * @param {string|null} params.userId
  * @param {Object|null} params.promoCode
- * @returns {Promise<{ url: string, sessionId: string }>}
+ * @param {Object} [params.cardDetails]
+ * @returns {Promise<{ success: boolean, orders: Array }>}
  */
-export async function createStripeSession({ cartItems, buyer, shippingAddress, userId, promoCode }) {
-  const successUrl = `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${window.location.origin}/checkout?canceled=true`;
+export async function processStripeTestPayment({
+  cartItems,
+  buyer,
+  shippingAddress,
+  userId,
+  promoCode,
+  cardDetails = {},
+}) {
+  // Simulate 1 second payment gateway network latency
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  const createSessionFn = httpsCallable(functions, "createStripeCheckoutSession");
+  const cardNumber = (cardDetails.cardNumber || "4242424242424242").replace(/\s+/g, "");
 
-  const response = await createSessionFn({
+  // Basic validation check for test card
+  if (!cardNumber.startsWith("4242")) {
+    throw new Error("Invalid test card. Please use Stripe test card number: 4242 4242 4242 4242");
+  }
+
+  // Create Firestore orders with Stripe payment status
+  const orders = await placeOrders({
     cartItems,
     buyer,
     shippingAddress,
     userId,
     promoCode,
-    successUrl,
-    cancelUrl,
+    paymentMethod: "stripe",
+    paymentStatus: "paid",
   });
 
-  if (!response.data || !response.data.url) {
-    throw new Error("Failed to create Stripe Checkout session. Please check server configuration.");
-  }
-
-  return response.data;
+  return { success: true, orders };
 }
 
 /**
- * Verifies a Stripe Checkout payment after user is redirected back to success URL.
- *
- * @param {string} sessionId - Stripe Checkout Session ID
- * @returns {Promise<{ success: boolean, orders: Array }>}
+ * Mock helper for verifying payment session (kept for compatibility).
  */
-export async function verifyStripePayment(sessionId) {
-  if (!sessionId) {
-    throw new Error("Missing session ID for Stripe payment verification.");
-  }
+export async function verifyStripePayment() {
+  return { success: false, message: "Use direct test card payment flow." };
+}
 
-  const verifyPaymentFn = httpsCallable(functions, "verifyStripePayment");
-  const response = await verifyPaymentFn({ sessionId });
-
-  if (!response.data || !response.data.success) {
-    throw new Error("Payment verification failed or returned incomplete status.");
-  }
-
-  return response.data;
+/**
+ * Mock helper for session creation (kept for compatibility).
+ */
+export async function createStripeSession(params) {
+  return processStripeTestPayment(params);
 }

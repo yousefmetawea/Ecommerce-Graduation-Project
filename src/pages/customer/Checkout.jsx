@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { placeOrders } from "../../services/orders";
-import { createStripeSession } from "../../services/stripe";
+import { processStripeTestPayment } from "../../services/stripe";
 
 const money = (amount) => `$${Number(amount).toFixed(2)}`;
 
@@ -24,6 +24,9 @@ export default function Checkout() {
   const isCanceled = searchParams.get("canceled") === "true";
 
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
+  const [cardExpiry, setCardExpiry] = useState("12/30");
+  const [cardCvc, setCardCvc] = useState("123");
 
   const [form, setForm] = useState({
     name: currentUser?.displayName ?? "",
@@ -79,7 +82,7 @@ export default function Checkout() {
 
     try {
       if (paymentMethod === "stripe") {
-        const sessionData = await createStripeSession({
+        const result = await processStripeTestPayment({
           cartItems: items,
           buyer: { name: form.name, email: form.email, phone: form.phone },
           shippingAddress: {
@@ -90,13 +93,11 @@ export default function Checkout() {
           },
           userId: currentUser?.uid ?? null,
           promoCode: promoCode && discount > 0 ? promoCode : null,
+          cardDetails: { cardNumber, cardExpiry, cardCvc },
         });
 
-        if (sessionData && sessionData.url) {
-          window.location.href = sessionData.url;
-        } else {
-          throw new Error("Failed to retrieve Stripe Checkout URL.");
-        }
+        clearCart();
+        navigate("/order-confirmation", { replace: true, state: { orders: result.orders } });
       } else {
         const orders = await placeOrders({
           cartItems: items,
@@ -269,15 +270,49 @@ export default function Checkout() {
                 />
                 <span>
                   <strong>Credit or debit card</strong>
-                  <small>Secure online payment via Stripe Test Mode</small>
+                  <small>Stripe Test Mode Demo (Zero-Cost)</small>
                 </span>
                 <span className="promo-badge" style={{ backgroundColor: "#6366f1", color: "#fff" }}>Stripe Test</span>
                 {paymentMethod === "stripe" && <span className="payment-check">Selected</span>}
               </label>
 
               {paymentMethod === "stripe" && (
-                <div className="stripe-test-notice" style={{ padding: "0.75rem 1rem", background: "var(--color-bg-alt, #f8fafc)", border: "1px solid var(--color-border, #e2e8f0)", borderRadius: "8px", fontSize: "0.875rem", marginTop: "0.5rem" }}>
-                  <span>💳 <strong>Test Card:</strong> Use <code>4242 4242 4242 4242</code> with any future expiry date & CVC.</span>
+                <div className="stripe-test-notice" style={{ padding: "1rem", background: "var(--color-bg-alt, #f8fafc)", border: "1px solid var(--color-border, #e2e8f0)", borderRadius: "8px", marginTop: "0.5rem" }}>
+                  <div style={{ fontSize: "0.85rem", marginBottom: "0.75rem", color: "#475569" }}>
+                    💳 <strong>Stripe Test Simulation:</strong> Use <code>4242 4242 4242 4242</code> for demo card payment. No real charge will occur.
+                  </div>
+                  <div className="form-grid" style={{ gap: "0.75rem" }}>
+                    <label className="form-field field-full">
+                      <span style={{ fontSize: "0.8rem" }}>Card number</span>
+                      <input
+                        type="text"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        placeholder="4242 4242 4242 4242"
+                        required
+                      />
+                    </label>
+                    <label className="form-field">
+                      <span style={{ fontSize: "0.8rem" }}>Expires</span>
+                      <input
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value)}
+                        placeholder="MM/YY"
+                        required
+                      />
+                    </label>
+                    <label className="form-field">
+                      <span style={{ fontSize: "0.8rem" }}>CVC</span>
+                      <input
+                        type="text"
+                        value={cardCvc}
+                        onChange={(e) => setCardCvc(e.target.value)}
+                        placeholder="123"
+                        required
+                      />
+                    </label>
+                  </div>
                 </div>
               )}
 
@@ -296,10 +331,10 @@ export default function Checkout() {
           <button className="btn btn-primary place-order-button" type="submit" disabled={submitting}>
             {submitting
               ? paymentMethod === "stripe"
-                ? "Connecting to Stripe…"
+                ? "Processing Card Payment…"
                 : "Placing your order…"
               : paymentMethod === "stripe"
-              ? `Proceed to Card Payment · ${money(total)}`
+              ? `Pay with Test Card · ${money(total)}`
               : `Place order · ${money(total)}`}
           </button>
           <p className="checkout-legal">By placing this order, you confirm that the delivery details are correct.</p>
