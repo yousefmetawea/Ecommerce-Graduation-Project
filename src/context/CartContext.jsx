@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { validatePromoCode, calculatePromoDiscount } from "../services/promoCodes";
 
 const STORAGE_KEY = "souk-cart-v1";
