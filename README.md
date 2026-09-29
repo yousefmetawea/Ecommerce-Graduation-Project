@@ -26,7 +26,10 @@ plays that role directly from the frontend.
   - **Product Moderation**: Marketplace-wide catalog inspection, editing, and removal of spam listings.
   - **Category Management**: Full CRUD for categories with custom slugs, descriptions, image banners, and live product counts.
   - **Orders Management**: Global order tracker across all buyers and sellers with line-item inspection and status override.
-  - **Platform KPIs & Health**: Gross Platform Volume ($ GMV), user demographics, inventory health, and delivery metrics.
+- **Promo Codes & Discount Engine**:
+  - **Cart & Checkout Integration**: Real-time validation, automatic discount calculation (Percentage `%` or Fixed `$`), minimum order rules, and max discount caps.
+  - **Proportional Order Splitting**: Discount is distributed proportionally across multi-seller split orders and recorded on receipts and order histories.
+  - **Admin Promo Campaign Manager**: Full CRUD in Admin Panel to launch discount codes with expiration dates, usage limits, and live status controls.
 
 ## Setup
 

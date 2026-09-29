@@ -5,13 +5,23 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
+import { incrementPromoUsage } from "./promoCodes";
 
 /**
  * Creates one order per seller and decrements every ordered product's stock
  * in the same Firestore transaction. The cart is only a client-side hint:
  * price, seller, and availability are re-read from Firestore before writing.
+ *
+ * If a promo code was applied, the total discount is proportionally distributed
+ * among the seller orders.
  */
-export async function placeOrders({ cartItems, buyer, shippingAddress, userId = null }) {
+export async function placeOrders({
+  cartItems,
+  buyer,
+  shippingAddress,
+  userId = null,
+  promoCode = null,
+}) {
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
     throw new Error("Your cart is empty.");
   }
@@ -32,12 +42,22 @@ export async function placeOrders({ cartItems, buyer, shippingAddress, userId = 
   const lines = [...quantities].map(([productId, quantity]) => ({ productId, quantity }));
   const productRefs = lines.map(({ productId }) => doc(db, "products", productId));
 
+  // If promo code is used, load the promo doc ref inside or before transaction
+  const promoRef = promoCode?.code ? doc(db, "promoCodes", promoCode.code.toUpperCase().trim()) : null;
+
   // Allocate IDs outside the transaction callback so retries reuse the same IDs.
   const orderIds = new Map();
 
-  return runTransaction(db, async (transaction) => {
+  const createdOrders = await runTransaction(db, async (transaction) => {
+    // Reads
     const productSnapshots = await Promise.all(productRefs.map((ref) => transaction.get(ref)));
+    let promoSnapshot = null;
+    if (promoRef) {
+      promoSnapshot = await transaction.get(promoRef);
+    }
+
     const groups = new Map();
+    let calculatedGrandSubtotal = 0;
 
     productSnapshots.forEach((snapshot, index) => {
       const { productId, quantity } = lines[index];
@@ -73,17 +93,73 @@ export async function placeOrders({ cartItems, buyer, shippingAddress, userId = 
       }
       const group = groups.get(sellerId);
       group.items.push(item);
-      group.subtotal += item.price * quantity;
+      const lineTotal = item.price * quantity;
+      group.subtotal += lineTotal;
+      calculatedGrandSubtotal += lineTotal;
     });
 
-    const orders = [...groups.values()].map((group) => {
+    // Validate and calculate real promo discount from server data
+    let totalDiscount = 0;
+    let promoDataToStore = null;
+
+    if (promoSnapshot && promoSnapshot.exists()) {
+      const pData = promoSnapshot.data();
+      if (pData.isActive !== false) {
+        const minOrder = Number(pData.minOrderAmount || 0);
+        if (minOrder <= 0 || calculatedGrandSubtotal >= minOrder) {
+          const type = pData.type === "fixed" ? "fixed" : "percentage";
+          const val = Number(pData.value || 0);
+          if (type === "percentage") {
+            totalDiscount = (calculatedGrandSubtotal * val) / 100;
+            const maxDisc = Number(pData.maxDiscount);
+            if (Number.isFinite(maxDisc) && maxDisc > 0 && totalDiscount > maxDisc) {
+              totalDiscount = maxDisc;
+            }
+          } else {
+            totalDiscount = Math.min(calculatedGrandSubtotal, val);
+          }
+          totalDiscount = Math.max(0, Math.round(totalDiscount * 100) / 100);
+          promoDataToStore = {
+            code: promoCode.code.toUpperCase().trim(),
+            type,
+            value: val,
+            totalDiscount,
+          };
+        }
+      }
+    }
+
+    const groupList = [...groups.values()];
+    let remainingDiscountToDistribute = totalDiscount;
+
+    const orders = groupList.map((group, index) => {
       if (!orderIds.has(group.sellerId)) {
         orderIds.set(group.sellerId, doc(collection(db, "orders")).id);
       }
-      return {
+
+      // Distribute discount proportionally across seller orders
+      let sellerDiscount = 0;
+      if (totalDiscount > 0 && calculatedGrandSubtotal > 0) {
+        if (index === groupList.length - 1) {
+          // Last seller gets the remaining cents
+          sellerDiscount = Math.min(group.subtotal, Math.max(0, remainingDiscountToDistribute));
+        } else {
+          sellerDiscount = Math.min(
+            group.subtotal,
+            Math.round(((group.subtotal / calculatedGrandSubtotal) * totalDiscount) * 100) / 100
+          );
+          remainingDiscountToDistribute -= sellerDiscount;
+        }
+      }
+
+      const orderTotal = Math.max(0, Math.round((group.subtotal - sellerDiscount) * 100) / 100);
+
+      const orderDoc = {
         id: orderIds.get(group.sellerId),
         ...group,
-        total: group.subtotal,
+        subtotal: group.subtotal,
+        discount: sellerDiscount,
+        total: orderTotal,
         currency: "USD",
         userId,
         buyer: {
@@ -100,9 +176,18 @@ export async function placeOrders({ cartItems, buyer, shippingAddress, userId = 
         paymentMethod: "cash_on_delivery",
         status: "pending",
       };
+
+      if (promoDataToStore && sellerDiscount > 0) {
+        orderDoc.promoCode = {
+          ...promoDataToStore,
+          discountAmount: sellerDiscount,
+        };
+      }
+
+      return orderDoc;
     });
 
-    // All reads occur before any writes, as required by Firestore transactions.
+    // Writes (all reads occurred before any writes)
     productSnapshots.forEach((snapshot, index) => {
       const currentStock = Number(snapshot.data().stock);
       transaction.update(productRefs[index], { stock: currentStock - lines[index].quantity });
@@ -115,4 +200,11 @@ export async function placeOrders({ cartItems, buyer, shippingAddress, userId = 
 
     return orders;
   });
+
+  // Increment promo code usage count asynchronously if promo was used
+  if (promoCode?.code) {
+    incrementPromoUsage(promoCode.code);
+  }
+
+  return createdOrders;
 }

@@ -2164,5 +2164,119 @@ textarea {
   border-top: 1px solid var(--line);
 }
 
+/* ==========================================================================
+   Promo Codes Styles (Cart, Checkout, and Admin)
+   ========================================================================== */
+
+.promo-box {
+  margin: 0.85rem 0;
+  padding: 0.75rem 0;
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
+}
+
+.promo-form {
+  margin: 0;
+}
+
+.promo-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.promo-input-wrap input {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+.promo-apply-btn {
+  width: auto;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.promo-applied-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #edf4ed;
+  border: 1px solid var(--sage);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+}
+
+.promo-tag-name {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--sage);
+  letter-spacing: 0.05em;
+}
+
+.promo-tag-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.promo-remove-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--rust);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.promo-remove-btn:hover {
+  background: #fbeae5;
+}
+
+.promo-msg-success {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--sage);
+  font-weight: 500;
+}
+
+.promo-msg-error {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--rust);
+}
+
+.summary-discount {
+  color: var(--sage);
+}
+
+.summary-discount strong {
+  color: var(--sage);
+}
+
+.promo-code-badge {
+  display: inline-block;
+  background: #edf4ed;
+  color: var(--sage);
+  border: 1px solid var(--sage);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius);
+}
+
+
 
 

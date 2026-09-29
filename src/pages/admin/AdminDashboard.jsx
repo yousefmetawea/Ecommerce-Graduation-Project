@@ -16,17 +16,25 @@ import {
   adminUpdateOrderStatus,
   adminDeleteOrder,
 } from "../../services/admin";
+import {
+  fetchAllPromoCodes,
+  createPromoCode,
+  updatePromoCode,
+  deletePromoCode,
+  togglePromoCodeStatus,
+} from "../../services/promoCodes";
 
 import UserEditModal from "./components/UserEditModal";
 import CategoryModal from "./components/CategoryModal";
 import AdminProductModal from "./components/AdminProductModal";
 import AdminOrderModal from "./components/AdminOrderModal";
 import AdminConfirmModal from "./components/AdminConfirmModal";
+import PromoCodeModal from "./components/PromoCodeModal";
 
 export default function AdminDashboard() {
   const { currentUser } = useAuth();
 
-  // Active tab: 'overview' | 'users' | 'products' | 'categories' | 'orders'
+  // Active tab: 'overview' | 'users' | 'products' | 'categories' | 'promoCodes' | 'orders'
   const [activeTab, setActiveTab] = useState("overview");
 
   // Data states
@@ -34,6 +42,7 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [promoCodes, setPromoCodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -44,6 +53,9 @@ export default function AdminDashboard() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [editingPromo, setEditingPromo] = useState(null);
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: "",
@@ -71,6 +83,10 @@ export default function AdminDashboard() {
   // Categories
   const [categorySearch, setCategorySearch] = useState("");
 
+  // Promo Codes
+  const [promoSearch, setPromoSearch] = useState("");
+  const [promoStatusFilter, setPromoStatusFilter] = useState("all");
+
   // Orders
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -79,17 +95,19 @@ export default function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
-      const [uList, pList, cList, oList] = await Promise.all([
+      const [uList, pList, cList, oList, prList] = await Promise.all([
         fetchAllUsers(),
         fetchAllAdminProducts(),
         fetchAllCategories(),
         fetchAllAdminOrders(),
+        fetchAllPromoCodes(),
       ]);
 
       setUsers(uList || []);
       setProducts(pList || []);
       setCategories(cList || []);
       setOrders(oList || []);
+      setPromoCodes(prList || []);
     } catch (err) {
       console.error("Failed to load admin data:", err);
       setError("Failed to load platform data. Please refresh.");
@@ -269,6 +287,80 @@ export default function AdminDashboard() {
     });
   }
 
+  /* ---------------- PROMO CODE HANDLERS ---------------- */
+
+  function handleOpenAddPromo() {
+    setEditingPromo(null);
+    setIsPromoModalOpen(true);
+  }
+
+  function handleOpenEditPromo(promo) {
+    setEditingPromo(promo);
+    setIsPromoModalOpen(true);
+  }
+
+  async function handleSavePromo(promoData) {
+    setIsProcessing(true);
+    try {
+      if (editingPromo) {
+        await updatePromoCode(editingPromo.code, promoData);
+        setPromoCodes((prev) =>
+          prev.map((p) => (p.code === editingPromo.code ? { ...p, ...promoData } : p))
+        );
+        flashSuccess(`Promo code "${editingPromo.code}" updated.`);
+      } else {
+        await createPromoCode(promoData);
+        setPromoCodes((prev) => [promoData, ...prev]);
+        flashSuccess(`Promo code "${promoData.code}" created!`);
+      }
+      setIsPromoModalOpen(false);
+      setEditingPromo(null);
+    } catch (err) {
+      console.error(err);
+      throw err;
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  async function handleTogglePromoStatus(promo) {
+    const nextStatus = !promo.isActive;
+    setIsProcessing(true);
+    try {
+      await togglePromoCodeStatus(promo.code, nextStatus);
+      setPromoCodes((prev) =>
+        prev.map((p) => (p.code === promo.code ? { ...p, isActive: nextStatus } : p))
+      );
+      flashSuccess(`Promo code "${promo.code}" marked as ${nextStatus ? "Active" : "Inactive"}.`);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to toggle promo code status.");
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function handleDeletePromo(promo) {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Promo Code",
+      message: `Are you sure you want to permanently delete promo code "${promo.code}"?`,
+      confirmButtonText: "Delete Promo Code",
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await deletePromoCode(promo.code);
+          setPromoCodes((prev) => prev.filter((p) => p.code !== promo.code));
+          flashSuccess(`Promo code "${promo.code}" deleted.`);
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          console.error(err);
+          setError("Failed to delete promo code.");
+        }
+      },
+    });
+  }
+
   /* ---------------- ORDER HANDLERS ---------------- */
 
   async function handleUpdateOrderStatus(orderId, newStatus) {
@@ -319,6 +411,11 @@ export default function AdminDashboard() {
       return sum;
     }, 0);
 
+    const totalSavingsGranted = orders.reduce((sum, o) => {
+      if (o.status !== "cancelled") return sum + Number(o.discount || 0);
+      return sum;
+    }, 0);
+
     const activeUsers = users.filter((u) => (u.status || "active") === "active").length;
     const suspendedUsers = users.filter((u) => u.status === "suspended").length;
     const sellerUsers = users.filter((u) => u.role === "seller").length;
@@ -331,8 +428,11 @@ export default function AdminDashboard() {
     const outOfStockProducts = products.filter((p) => (p.stock ?? 0) <= 0).length;
     const lowStockProducts = products.filter((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 5).length;
 
+    const activePromoCodes = promoCodes.filter((p) => p.isActive !== false).length;
+
     return {
       grossVolume,
+      totalSavingsGranted,
       totalUsers: users.length,
       activeUsers,
       suspendedUsers,
@@ -343,11 +443,13 @@ export default function AdminDashboard() {
       outOfStockProducts,
       lowStockProducts,
       totalCategories: categories.length,
+      totalPromoCodes: promoCodes.length,
+      activePromoCodes,
       totalOrders: orders.length,
       pendingOrders,
       deliveredOrders,
     };
-  }, [orders, users, products, categories]);
+  }, [orders, users, products, categories, promoCodes]);
 
   /* ---------------- FILTERED LISTS ---------------- */
 
@@ -405,6 +507,32 @@ export default function AdminDashboard() {
     });
   }, [categories, categorySearch]);
 
+  const filteredPromoCodes = useMemo(() => {
+    return promoCodes.filter((p) => {
+      const matchSearch =
+        !promoSearch ||
+        p.code?.toLowerCase().includes(promoSearch.toLowerCase()) ||
+        p.description?.toLowerCase().includes(promoSearch.toLowerCase());
+
+      let matchStatus = true;
+      const isExpired =
+        p.expiryDate &&
+        new Date(
+          p.expiryDate.toDate
+            ? p.expiryDate.toDate()
+            : p.expiryDate.seconds
+            ? p.expiryDate.seconds * 1000
+            : p.expiryDate
+        ).getTime() < Date.now();
+
+      if (promoStatusFilter === "active") matchStatus = p.isActive !== false && !isExpired;
+      if (promoStatusFilter === "inactive") matchStatus = p.isActive === false;
+      if (promoStatusFilter === "expired") matchStatus = Boolean(isExpired);
+
+      return matchSearch && matchStatus;
+    });
+  }, [promoCodes, promoSearch, promoStatusFilter]);
+
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
       const matchSearch =
@@ -412,7 +540,8 @@ export default function AdminDashboard() {
         o.id?.toLowerCase().includes(orderSearch.toLowerCase()) ||
         o.buyer?.name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
         o.buyer?.email?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-        o.sellerName?.toLowerCase().includes(orderSearch.toLowerCase());
+        o.sellerName?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        o.promoCode?.code?.toLowerCase().includes(orderSearch.toLowerCase());
 
       const matchStatus =
         orderStatusFilter === "all" || o.status === orderStatusFilter;
@@ -440,7 +569,7 @@ export default function AdminDashboard() {
           </div>
           <p>
             Logged in as <strong>{currentUser?.email}</strong>. Moderate users,
-            products, categories, and marketplace orders.
+            products, categories, promo codes, and marketplace orders.
           </p>
         </div>
 
@@ -506,6 +635,13 @@ export default function AdminDashboard() {
         </button>
         <button
           type="button"
+          className={`seller-tab-btn ${activeTab === "promoCodes" ? "active" : ""}`}
+          onClick={() => setActiveTab("promoCodes")}
+        >
+          🏷️ Promo Codes ({promoCodes.length})
+        </button>
+        <button
+          type="button"
           className={`seller-tab-btn ${activeTab === "orders" ? "active" : ""}`}
           onClick={() => setActiveTab("orders")}
         >
@@ -528,7 +664,15 @@ export default function AdminDashboard() {
               <div className="stat-value">
                 ${metrics.grossVolume.toFixed(2)}
               </div>
-              <span className="stat-hint">Across {orders.length} orders</span>
+              <span className="stat-hint">
+                {metrics.totalSavingsGranted > 0 ? (
+                  <span style={{ color: "var(--sage)" }}>
+                    ${metrics.totalSavingsGranted.toFixed(2)} promo savings granted
+                  </span>
+                ) : (
+                  `Across ${orders.length} orders`
+                )}
+              </span>
             </div>
 
             <div className="stat-cell">
@@ -548,18 +692,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="stat-cell">
-              <div className="stat-label">Order Fulfillment</div>
-              <div className="stat-value" style={{ fontSize: "1.3rem" }}>
-                {metrics.pendingOrders > 0 ? (
-                  <span style={{ color: "var(--amber-dark)" }}>
-                    {metrics.pendingOrders} Pending
-                  </span>
-                ) : (
-                  <span style={{ color: "var(--sage)" }}>All Processed</span>
-                )}
-              </div>
+              <div className="stat-label">Active Promo Codes</div>
+              <div className="stat-value">{metrics.activePromoCodes}</div>
               <span className="stat-hint">
-                {metrics.deliveredOrders} delivered orders
+                {metrics.totalPromoCodes} total discounts created
               </span>
             </div>
           </div>
@@ -584,24 +720,24 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   className="quick-action-btn"
-                  onClick={handleOpenAddCategory}
+                  onClick={handleOpenAddPromo}
                 >
-                  <span className="quick-action-icon">📁</span>
+                  <span className="quick-action-icon">🏷️</span>
                   <div>
-                    <strong>Add New Marketplace Category</strong>
-                    <p>Create a fresh category for merchants to list under.</p>
+                    <strong>Create New Promo Code</strong>
+                    <p>Launch discount campaigns (% or fixed dollar savings).</p>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   className="quick-action-btn"
-                  onClick={() => setActiveTab("products")}
+                  onClick={handleOpenAddCategory}
                 >
-                  <span className="quick-action-icon">🛍️</span>
+                  <span className="quick-action-icon">📁</span>
                   <div>
-                    <strong>Inspect Products Catalog</strong>
-                    <p>Review active listings, adjust prices, or remove spam.</p>
+                    <strong>Add Marketplace Category</strong>
+                    <p>Create a fresh category for merchants to list under.</p>
                   </div>
                 </button>
 
@@ -622,7 +758,7 @@ export default function AdminDashboard() {
             {/* Platform Health Card */}
             <div className="overview-card">
               <div className="overview-card-header">
-                <h3>Platform Health &amp; Activity</h3>
+                <h3>Platform Health &amp; Discounts</h3>
               </div>
               <div className="admin-health-list">
                 <div className="health-row">
@@ -636,20 +772,20 @@ export default function AdminDashboard() {
                   </strong>
                 </div>
                 <div className="health-row">
-                  <span>Catalog Health</span>
-                  <span>
-                    {metrics.lowStockProducts > 0 ? `${metrics.lowStockProducts} low stock` : "Stock levels optimal"}
-                  </span>
+                  <span>Active Discounts</span>
+                  <strong>{metrics.activePromoCodes} codes active</strong>
                 </div>
                 <div className="health-row">
-                  <span>Out of Stock Listings</span>
-                  <strong style={{ color: metrics.outOfStockProducts > 0 ? "var(--amber-dark)" : "inherit" }}>
-                    {metrics.outOfStockProducts} listings
+                  <span>Total Savings Distributed</span>
+                  <strong style={{ color: "var(--sage)" }}>
+                    ${metrics.totalSavingsGranted.toFixed(2)}
                   </strong>
                 </div>
                 <div className="health-row">
-                  <span>Total Categories</span>
-                  <strong>{metrics.totalCategories}</strong>
+                  <span>Pending Fulfillment</span>
+                  <strong style={{ color: metrics.pendingOrders > 0 ? "var(--amber-dark)" : "inherit" }}>
+                    {metrics.pendingOrders} orders
+                  </strong>
                 </div>
               </div>
             </div>
@@ -660,7 +796,6 @@ export default function AdminDashboard() {
       {/* ---------------- TAB 2: USERS MANAGEMENT (SOFT DELETE) ---------------- */}
       {activeTab === "users" && (
         <div className="seller-tab-content">
-          {/* Controls Bar */}
           <div className="seller-controls-bar">
             <div className="seller-search-box">
               <input
@@ -696,7 +831,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Users Table */}
           {filteredUsers.length === 0 ? (
             <div className="placeholder-panel">No users matched your query.</div>
           ) : (
@@ -815,7 +949,6 @@ export default function AdminDashboard() {
       {/* ---------------- TAB 3: PRODUCTS MODERATION ---------------- */}
       {activeTab === "products" && (
         <div className="seller-tab-content">
-          {/* Controls Bar */}
           <div className="seller-controls-bar">
             <div className="seller-search-box">
               <input
@@ -853,7 +986,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Products Table */}
           {filteredProducts.length === 0 ? (
             <div className="placeholder-panel">No products matched your filter.</div>
           ) : (
@@ -1017,15 +1149,176 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ---------------- TAB 5: ORDERS MANAGEMENT ---------------- */}
-      {activeTab === "orders" && (
+      {/* ---------------- TAB 5: PROMO CODES MANAGEMENT ---------------- */}
+      {activeTab === "promoCodes" && (
         <div className="seller-tab-content">
-          {/* Controls Bar */}
           <div className="seller-controls-bar">
             <div className="seller-search-box">
               <input
                 type="text"
-                placeholder="Search orders by Order ID, Buyer, or Seller…"
+                placeholder="Search promo codes by Code or Description…"
+                value={promoSearch}
+                onChange={(e) => setPromoSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="seller-filter-select">
+              <select
+                value={promoStatusFilter}
+                onChange={(e) => setPromoStatusFilter(e.target.value)}
+              >
+                <option value="all">All Promo Codes</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleOpenAddPromo}
+              style={{ width: "auto", whiteSpace: "nowrap" }}
+            >
+              + Create Promo Code
+            </button>
+          </div>
+
+          {filteredPromoCodes.length === 0 ? (
+            <div className="placeholder-panel">
+              {promoCodes.length === 0
+                ? "No promo codes created yet. Click '+ Create Promo Code' above to launch your first discount campaign!"
+                : "No promo codes matched your query."}
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="seller-table">
+                <thead>
+                  <tr>
+                    <th>Promo Code</th>
+                    <th>Discount Rate</th>
+                    <th>Usage &amp; Limits</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPromoCodes.map((p) => {
+                    let expiryFormatted = "No Expiry";
+                    let isExpired = false;
+                    if (p.expiryDate) {
+                      const d = p.expiryDate.toDate
+                        ? p.expiryDate.toDate()
+                        : p.expiryDate.seconds
+                        ? new Date(p.expiryDate.seconds * 1000)
+                        : new Date(p.expiryDate);
+                      if (d && !isNaN(d.getTime())) {
+                        expiryFormatted = d.toLocaleDateString();
+                        isExpired = d.getTime() < Date.now();
+                      }
+                    }
+
+                    const isCurrentlyActive = p.isActive !== false && !isExpired;
+
+                    return (
+                      <tr key={p.code}>
+                        <td>
+                          <div>
+                            <span className="promo-code-badge">🏷️ {p.code}</span>
+                            {p.description && (
+                              <div className="table-sku">{p.description}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <strong style={{ fontSize: "0.95rem", color: "var(--ink)" }}>
+                            {p.type === "percentage" ? `${p.value}% OFF` : `$${Number(p.value).toFixed(2)} OFF`}
+                          </strong>
+                          {p.minOrderAmount > 0 && (
+                            <div className="table-sku">Min order: ${Number(p.minOrderAmount).toFixed(2)}</div>
+                          )}
+                          {p.maxDiscount > 0 && (
+                            <div className="table-sku">Max cap: ${Number(p.maxDiscount).toFixed(2)}</div>
+                          )}
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{p.timesUsed || 0}</strong>
+                            <span className="table-sku">
+                              {p.usageLimit ? ` / ${p.usageLimit} max uses` : " uses (Unlimited)"}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            {expiryFormatted}
+                            {isExpired && (
+                              <span className="stock-badge badge-out" style={{ marginLeft: "0.4rem", fontSize: "0.68rem" }}>
+                                Expired
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            className={`stock-badge ${
+                              isCurrentlyActive
+                                ? "badge-in"
+                                : isExpired
+                                ? "badge-out"
+                                : "badge-low"
+                            }`}
+                          >
+                            {isCurrentlyActive ? "Active" : isExpired ? "Expired" : "Inactive"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="table-action-btns">
+                            <button
+                              type="button"
+                              className={`btn ${
+                                p.isActive !== false ? "btn-secondary" : "btn-primary"
+                              } btn-sm`}
+                              onClick={() => handleTogglePromoStatus(p)}
+                              title="Toggle Active / Inactive"
+                            >
+                              {p.isActive !== false ? "Deactivate" : "Activate"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => handleOpenEditPromo(p)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger-sm btn-sm"
+                              onClick={() => handleDeletePromo(p)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ---------------- TAB 6: ORDERS MANAGEMENT ---------------- */}
+      {activeTab === "orders" && (
+        <div className="seller-tab-content">
+          <div className="seller-controls-bar">
+            <div className="seller-search-box">
+              <input
+                type="text"
+                placeholder="Search orders by Order ID, Buyer, Seller, or Promo Code…"
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
               />
@@ -1087,7 +1380,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Orders Table */}
           {filteredOrders.length === 0 ? (
             <div className="placeholder-panel">No orders matched your search.</div>
           ) : (
@@ -1098,7 +1390,7 @@ export default function AdminDashboard() {
                     <th>Order</th>
                     <th>Buyer</th>
                     <th>Seller</th>
-                    <th>Total</th>
+                    <th>Total &amp; Promo</th>
                     <th>Status</th>
                     <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
@@ -1137,6 +1429,11 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <strong>${Number(ord.total || 0).toFixed(2)}</strong>
+                          {ord.discount > 0 && (
+                            <div className="table-sku" style={{ color: "var(--sage)" }}>
+                              🏷️ {ord.promoCode?.code} (-${Number(ord.discount).toFixed(2)})
+                            </div>
+                          )}
                           <div className="table-sku">
                             {ord.items?.length || 0} item(s)
                           </div>
@@ -1213,6 +1510,17 @@ export default function AdminDashboard() {
         categories={categories}
         onClose={() => setEditingProduct(null)}
         onSave={handleSaveProduct}
+        isSaving={isProcessing}
+      />
+
+      <PromoCodeModal
+        isOpen={isPromoModalOpen}
+        promo={editingPromo}
+        onClose={() => {
+          setIsPromoModalOpen(false);
+          setEditingPromo(null);
+        }}
+        onSubmit={handleSavePromo}
         isSaving={isProcessing}
       />
 

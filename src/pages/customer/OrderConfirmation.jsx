@@ -19,6 +19,9 @@ export default function OrderConfirmation() {
 
   const firstOrder = orders[0];
   const grandTotal = orders.reduce((sum, order) => sum + order.total, 0);
+  const grandDiscount = orders.reduce((sum, order) => sum + (order.discount || 0), 0);
+  const grandSubtotal = orders.reduce((sum, order) => sum + (order.subtotal || order.total), 0);
+  const promoCodeUsed = orders.find((o) => o.promoCode)?.promoCode;
 
   return (
     <article className="receipt">
@@ -45,12 +48,34 @@ export default function OrderConfirmation() {
               <strong>{money(item.price * item.quantity)}</strong>
             </div>
           ))}
-          <div className="receipt-seller-total"><span>Seller subtotal</span><strong>{money(order.total)}</strong></div>
+
+          {order.discount > 0 && (
+            <div className="receipt-line" style={{ color: "var(--sage)", fontWeight: 500 }}>
+              <span>Discount ({order.promoCode?.code || "Promo"})</span>
+              <strong>-{money(order.discount)}</strong>
+            </div>
+          )}
+
+          <div className="receipt-seller-total">
+            <span>Seller total</span>
+            <strong>{money(order.total)}</strong>
+          </div>
           <p className="receipt-order-id">Order reference: {order.id}</p>
         </section>
       ))}
 
-      <div className="receipt-total"><span>Items total · shipping extra</span><strong>{money(grandTotal)}</strong></div>
+      {grandDiscount > 0 && (
+        <div className="receipt-line" style={{ color: "var(--sage)", margin: "0.5rem 0", fontWeight: 500 }}>
+          <span>Total Promo Savings {promoCodeUsed?.code ? `(${promoCodeUsed.code})` : ""}</span>
+          <strong>-{money(grandDiscount)}</strong>
+        </div>
+      )}
+
+      <div className="receipt-total">
+        <span>Items total · shipping extra</span>
+        <strong>{money(grandTotal)}</strong>
+      </div>
+
       <p className="receipt-email-note">A confirmation for {firstOrder.buyer.email} is shown here. Keep this page for your order references.</p>
       <Link to="/" className="btn btn-primary receipt-home">Continue exploring</Link>
       <div className="receipt-bottomline">Thank you for supporting independent sellers.</div>
