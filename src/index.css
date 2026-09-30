@@ -95,15 +95,24 @@ textarea {
 /* ---------- Navbar ---------- */
 
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   border-bottom: 1px solid var(--line);
-  background: var(--paper-raised);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: box-shadow 0.2s ease;
+}
+.navbar:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .navbar-inner {
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 1.5rem;
-  height: 64px;
+  height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -112,13 +121,25 @@ textarea {
 
 .navbar-brand {
   font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
   text-decoration: none;
   color: var(--ink);
   display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--amber);
 }
 
 .navbar-brand span {
@@ -128,44 +149,256 @@ textarea {
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .navbar-links a {
   text-decoration: none;
   color: var(--ink-soft);
-  padding: 0.25rem 0;
-  border-bottom: 1px solid transparent;
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
 }
 
 .navbar-links a.active,
 .navbar-links a:hover {
   color: var(--ink);
-  border-bottom-color: var(--amber);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nav-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem !important;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px !important;
+  color: var(--ink) !important;
+  font-weight: 500;
+}
+.nav-account-btn:hover {
+  border-color: var(--ink);
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--amber);
+  color: var(--paper-raised);
+  font-size: 0.72rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  margin-left: 2px;
+}
+.nav-badge-rust {
+  background: var(--rust);
 }
 
 .navbar-role-tag {
-  font-size: 0.75rem;
-  text-transform: lowercase;
-  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   border-radius: 999px;
-  padding: 0.15rem 0.65rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--line);
+}
+.role-tag-customer {
+  background: #edf2f7;
+  color: #4a5568;
+}
+.role-tag-seller {
+  background: #feebc8;
+  color: #c05621;
+}
+.role-tag-admin {
+  background: #ebf8ff;
+  color: #2b6cb0;
+}
+
+.nav-logout-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-logout-btn:hover {
+  background: #fbeae5;
+  color: var(--rust);
+  border-color: var(--rust);
+}
+
+.nav-link-login {
   color: var(--ink-soft);
 }
 
-/* ---------- Footer ---------- */
+.nav-signup-btn {
+  padding: 0.45rem 1.1rem !important;
+  border-radius: 20px !important;
+}
 
-.footer {
+/* ---------- Enhanced Footer ---------- */
+
+.footer-enhanced {
+  background: var(--ink);
+  color: var(--paper);
   border-top: 1px solid var(--line);
-  padding: 1.5rem;
-  text-align: center;
-  color: var(--ink-soft);
-  font-size: 0.875rem;
+  margin-top: 4rem;
+  padding: 3.5rem 0 1.5rem;
 }
+
+.footer-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 2.5rem;
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-col-brand .footer-brand {
+  color: var(--paper) !important;
+  margin-bottom: 0.75rem;
+}
+
+.footer-tagline {
+  font-size: 0.88rem;
+  color: #a0aec0;
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.footer-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.footer-feature-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--paper);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius);
+}
+
+.footer-col h4 {
+  color: var(--paper);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  margin-bottom: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-col ul li {
+  margin-bottom: 0.6rem;
+}
+
+.footer-col ul a,
+.footer-support-link {
+  color: #a0aec0;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.15s;
+}
+
+.footer-col ul a:hover {
+  color: var(--amber);
+}
+
+.footer-payment-note {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  margin-bottom: 0.8rem;
+}
+
+.footer-payment-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--paper);
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1.5rem;
+  font-size: 0.82rem;
+  color: #718096;
+}
+
+.footer-tech-stack {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .footer-bottom {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  .navbar-inner {
+    padding: 0 1rem;
+  }
+  .navbar-links {
+    gap: 0.75rem;
+    font-size: 0.82rem;
+  }
+}
+
 
 /* ---------- Forms ---------- */
 
