@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
+import ChatWidget from "../components/ChatWidget";
 
 export default function MainLayout() {
   const { currentUser, role, logout } = useAuth();
@@ -92,6 +93,9 @@ export default function MainLayout() {
       </main>
 
       <footer className="footer">Souk — graduation project · built with React &amp; Firebase</footer>
+
+      <ChatWidget />
     </div>
   );
 }
+
