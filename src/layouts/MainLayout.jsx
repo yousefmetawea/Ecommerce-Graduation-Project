@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { ShoppingBag, Heart, User, Store, ShieldCheck, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -29,30 +30,41 @@ export default function MainLayout() {
                 <NavLink to="/">Shop</NavLink>
               </li>
               <li>
-                <NavLink to="/cart">Cart{itemCount > 0 ? ` (${itemCount})` : ""}</NavLink>
+                <NavLink to="/cart" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                  <ShoppingBag size={16} />
+                  Cart{itemCount > 0 ? ` (${itemCount})` : ""}
+                </NavLink>
               </li>
 
               {currentUser && role === "seller" && (
                 <li>
-                  <NavLink to="/seller">Seller hub</NavLink>
+                  <NavLink to="/seller" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                    <Store size={16} />
+                    Seller hub
+                  </NavLink>
                 </li>
               )}
 
               {currentUser && role === "admin" && (
                 <li>
-                  <NavLink to="/admin">Admin</NavLink>
+                  <NavLink to="/admin" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                    <ShieldCheck size={16} />
+                    Admin
+                  </NavLink>
                 </li>
               )}
 
               {currentUser ? (
                 <>
                   <li>
-                    <NavLink to="/wishlist" aria-label="Wishlist">
-                      ♥{wishlist.length > 0 ? ` (${wishlist.length})` : ""}
+                    <NavLink to="/wishlist" aria-label="Wishlist" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>
+                      <Heart size={16} />
+                      {wishlist.length > 0 ? ` (${wishlist.length})` : ""}
                     </NavLink>
                   </li>
                   <li>
-                    <NavLink to="/account" className="navbar-account-link">
+                    <NavLink to="/account" className="navbar-account-link" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                      <User size={16} />
                       Account
                     </NavLink>
                   </li>
@@ -62,11 +74,13 @@ export default function MainLayout() {
                   <li>
                     <a
                       href="#logout"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
                       onClick={(e) => {
                         e.preventDefault();
                         handleLogout();
                       }}
                     >
+                      <LogOut size={15} />
                       Log out
                     </a>
                   </li>
@@ -98,4 +112,5 @@ export default function MainLayout() {
     </div>
   );
 }
+
 

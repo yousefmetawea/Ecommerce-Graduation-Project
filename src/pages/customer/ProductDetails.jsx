@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import { Heart, ShoppingBag, Star } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -12,7 +16,6 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeImage, setActiveImage] = useState(0);
-  const [cartMessage, setCartMessage] = useState("");
   const { addItem } = useCart();
   const { currentUser } = useAuth();
   const { isWishlisted, toggle, error: wishlistError } = useWishlist();
@@ -38,7 +41,22 @@ export default function ProductDetails() {
     };
   }, [id]);
 
-  if (loading) return <div className="placeholder-panel">Loading product…</div>;
+  if (loading) {
+    return (
+      <div className="product-details">
+        <div className="product-details-gallery">
+          <Skeleton height={380} borderRadius={8} />
+        </div>
+        <div className="product-details-info">
+          <Skeleton width={100} height={24} style={{ marginBottom: 12 }} />
+          <Skeleton height={36} style={{ marginBottom: 12 }} />
+          <Skeleton width={120} height={20} style={{ marginBottom: 16 }} />
+          <Skeleton height={80} style={{ marginBottom: 24 }} />
+          <Skeleton height={48} width={200} />
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -54,6 +72,20 @@ export default function ProductDetails() {
   const outOfStock = (product.stock ?? 0) <= 0;
   const images = product.images?.length ? product.images : [];
   const wishlisted = currentUser ? isWishlisted(product.id) : false;
+
+  const handleAddToCart = () => {
+    addItem(product);
+    toast.success(`${product.name} added to cart!`);
+  };
+
+  const handleToggleWishlist = () => {
+    toggle(product.id);
+    if (wishlisted) {
+      toast("Removed from wishlist", { icon: "💔" });
+    } else {
+      toast.success("Added to wishlist!");
+    }
+  };
 
   return (
     <div>
@@ -87,8 +119,9 @@ export default function ProductDetails() {
           <h1>{product.name}</h1>
 
           {product.rating > 0 && (
-            <p className="product-details-rating">
-              ★ {product.rating.toFixed(1)} {product.ratingCount ? `(${product.ratingCount} reviews)` : ""}
+            <p className="product-details-rating" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+              <Star size={16} fill="var(--amber)" color="var(--amber)" />
+              {product.rating.toFixed(1)} {product.ratingCount ? `(${product.ratingCount} reviews)` : ""}
             </p>
           )}
 
@@ -107,33 +140,28 @@ export default function ProductDetails() {
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", flexWrap: "wrap" }}>
             <button
               className="btn btn-primary"
-              style={{ flex: "1 1 auto", minWidth: "160px" }}
+              style={{ flex: "1 1 auto", minWidth: "160px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
               disabled={outOfStock}
-              onClick={() => {
-                addItem(product);
-                setCartMessage("Added to your cart.");
-              }}
+              onClick={handleAddToCart}
             >
+              <ShoppingBag size={18} />
               {outOfStock ? "Unavailable" : "Add to cart"}
             </button>
 
             {currentUser && (
               <button
                 className={`btn ${wishlisted ? "btn-wishlist-active" : "btn-secondary"}`}
-                style={{ width: "auto", padding: "0.7rem 1rem" }}
-                onClick={() => toggle(product.id)}
+                style={{ width: "auto", padding: "0.7rem 1rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+                onClick={handleToggleWishlist}
                 aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                 title={wishlisted ? "Remove from wishlist" : "Save to wishlist"}
               >
-                {wishlisted ? "♥ Saved" : "♡ Wishlist"}
+                <Heart size={18} fill={wishlisted ? "var(--rust)" : "none"} color={wishlisted ? "var(--rust)" : "currentColor"} />
+                {wishlisted ? "Saved" : "Wishlist"}
               </button>
             )}
           </div>
-          {cartMessage && (
-            <p className="cart-feedback" role="status">
-              {cartMessage} <Link to="/cart">View cart</Link>
-            </p>
-          )}
+
           {wishlistError && (
             <p className="form-error" role="alert" style={{ marginTop: "0.75rem" }}>
               {wishlistError}
@@ -147,3 +175,4 @@ export default function ProductDetails() {
     </div>
   );
 }
+

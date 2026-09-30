@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
@@ -30,6 +31,32 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 3000,
+                style: {
+                  background: "var(--ink)",
+                  color: "var(--paper)",
+                  borderRadius: "var(--radius)",
+                  border: "1px solid var(--line)",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.9rem",
+                },
+                success: {
+                  iconTheme: {
+                    primary: "var(--sage)",
+                    secondary: "var(--paper)",
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: "var(--rust)",
+                    secondary: "var(--paper)",
+                  },
+                },
+              }}
+            />
             <Routes>
               <Route element={<MainLayout />}>
                 {/* Public - anyone can browse the storefront and auth pages */}
@@ -106,3 +133,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
