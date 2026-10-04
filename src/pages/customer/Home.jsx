@@ -121,8 +121,31 @@ export default function Home() {
         ))}
       </section>
 
-      {/* Price-only toolbar (no duplicate search/category here) */}
+      {/* Filter toolbar: full category dropdown + max price (pills in hero are quick filters) */}
       <section className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm">
+        <label htmlFor="categoryFilter" className="text-sm font-medium text-gray-500">
+          Category
+        </label>
+        <select
+          id="categoryFilter"
+          value={categoryId}
+          onChange={(e) => {
+            setCategoryId(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-xl border border-black/10 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-brand"
+          aria-label="Filter by category"
+        >
+          <option value="all">All categories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
+        <span className="hidden h-6 w-px bg-black/10 sm:block" aria-hidden="true" />
+
         <label htmlFor="maxPrice" className="text-sm font-medium text-gray-500">
           Max price $
         </label>
