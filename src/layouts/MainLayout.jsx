@@ -6,7 +6,6 @@ import {
   Store,
   ShieldCheck,
   LogOut,
-  Sparkles,
   Shield,
   CreditCard,
   Truck,
@@ -35,7 +34,7 @@ export default function MainLayout() {
         <div className="navbar-inner">
           <NavLink to="/" className="navbar-brand">
             <span className="brand-logo-icon">
-              <Sparkles size={18} />
+              <Store size={18} />
             </span>
             Souk<span>.</span>
           </NavLink>
@@ -136,7 +135,10 @@ export default function MainLayout() {
             {/* Col 1: Brand & Bio */}
             <div className="footer-col footer-col-brand">
               <NavLink to="/" className="navbar-brand footer-brand">
-                <Sparkles size={18} /> Souk<span>.</span>
+                <span className="brand-logo-icon">
+                  <Store size={18} />
+                </span>{" "}
+                Souk<span>.</span>
               </NavLink>
               <p className="footer-tagline">
                 Everything from sellers you trust. Your modern e-commerce marketplace powered by React &amp; Firebase.

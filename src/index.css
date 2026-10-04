@@ -9,8 +9,8 @@
   --rust: #b4482f;
   --line: #e4ded0;
 
-  --font-display: "Fraunces", "Georgia", serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-display: "Sora", "Inter", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
 
   --radius: 4px;
   color-scheme: light;
