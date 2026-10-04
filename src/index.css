@@ -1,3 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c2430;
+  --color-ink-soft: #4a5568;
+  --color-paper: #faf7f0;
+  --color-paper-raised: #ffffff;
+  --color-amber-brand: #d98e2b;
+  --color-amber-dark: #b5731d;
+  --color-sage: #5c7a5e;
+  --color-rust: #b4482f;
+  --color-line: #e4ded0;
+  --font-display: "Sora", "Inter", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+}
+
 :root {
   --ink: #1c2430;
   --ink-soft: #4a5568;
